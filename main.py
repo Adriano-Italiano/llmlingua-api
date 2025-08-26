@@ -3,17 +3,16 @@ from pydantic import BaseModel
 from llmlingua import PromptCompressor
 
 app = FastAPI()
+compressor = None  # lazy load
 
-# Ładujemy model do kompresji promptów (LLMLingua-2 jest szybszy)
-compressor = PromptCompressor("microsoft/llmlingua-2")
-
-# Definiujemy format requestu
 class PromptRequest(BaseModel):
     text: str
-    target_tokens: int = 200  # domyślny limit tokenów
+    target_tokens: int = 200
 
 @app.post("/compress")
 def compress_prompt(req: PromptRequest):
-    """Kompresja promptu do określonej liczby tokenów."""
+    global compressor
+    if compressor is None:
+        compressor = PromptCompressor("microsoft/llmlingua-2")  # model ładuje się dopiero przy 1. wywołaniu
     result = compressor.compress(req.text, target_token=req.target_tokens)
     return {"compressed": result["compressed_prompt"]}
